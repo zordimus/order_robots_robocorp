@@ -7,6 +7,7 @@ Library    RPA.HTTP
 Library    RPA.Tables
 Library    RPA.PDF
 Library    RPA.Archive
+Library    RPA.Dialogs
 
 Suite Teardown     Close All Browsers
 
@@ -26,8 +27,9 @@ ${ALLERT_OK_BTN}    //*[@type='button' and text()='OK']
 *** Tasks ***
 
 Order robots from RobotSpareBin Industries Inc
-    Set Screenshot Directory    ${SCREENSHOTS_PATH}
 
+    Set Screenshot Directory    ${SCREENSHOTS_PATH}
+    Input orders csv url dialog
     Open the robot order website
 
     ${orders_table}=    Get orders
@@ -46,9 +48,25 @@ Order robots from RobotSpareBin Industries Inc
     Create a ZIP file of the receipts
 
 *** Keywords ***
+Input orders csv url dialog
+
+    Add heading       Input ordes file url
+    Add text input    orders_file_url
+    ...                label=Orders file
+    ...                placeholder=Give orders csv file url here
+    ...                rows=5
+
+    ${result}=    Run dialog     title=Orders file    height=500    width=500
+
+    ${ORDERS_FILE_URL}=    Set Variable   ${result.orders_file_url}
+    Set Suite Variable    ${ORDERS_FILE_URL}     ${result.orders_file_url}
+
+    Log To Console    url to orders csv file: ${ORDERS_FILE_URL}
+
 Open the robot order website
     Open Available Browser    https://robotsparebinindustries.com/
     Open order your robot tab
+
 Get orders
     Get file from server    ${ORDERS_FILE_URL}   ${ORDERS_FILE_LOCAL_PATH}
     ${orders_table}=     Read orders file
