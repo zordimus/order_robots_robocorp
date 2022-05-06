@@ -6,7 +6,7 @@ Library    RPA.Browser
 Library    RPA.HTTP
 Library    RPA.Tables
 Library    RPA.PDF
-#Library	   Screenshot	${CURDIR}/screenshots
+Library    RPA.Archive
 
 #Suite Setup        Open Available Browser    https://robotsparebinindustries.com/
 Suite Teardown     Close All Browsers
@@ -48,7 +48,7 @@ Order robots from RobotSpareBin Industries Inc
         Embed the robot screenshot to the receipt PDF file    ${screenshot}    ${pdf}
         Go to order another robot
     END
-  #  Create a ZIP file of the receipts    
+    Create a ZIP file of the receipts    
 
 *** Keywords ***
 Open the robot order website
@@ -124,6 +124,13 @@ Embed the robot screenshot to the receipt PDF file
     ...             image_path=${Screenshot_path}
     ...             source_path=${PDF_path}
     ...             output_path=${PDF_path}
+
+Create a ZIP file of the receipts
+
+    ${zip_file_name}=    Set Variable    ${OUTPUT_DIR}/robot-receipt-PDFs.zip
+    Archive Folder With Zip
+    ...    ${RECEIPTS_PATH}
+    ...    ${zip_file_name}
 
 
 Go to order another robot
