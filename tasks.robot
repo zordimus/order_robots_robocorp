@@ -1,6 +1,10 @@
 *** Settings ***
-Documentation     Robot Spare Bin Excersice.
-...               Reads csv file and orders robots according it in https://robotsparebinindustries.com/.
+Documentation    Robot Spare Bin Excersice.
+...              Reads csv file and orders robots according it in https://robotsparebinindustries.com/.
+...              Creates PDF from the receipt of the oredered robot.
+...              Embeds robot image to pdf file.
+...              Continues ordering until all the ropots in the csv file are ordered.
+...              Archeives all receipts to one zip file into the output folder.
 
 Library    RPA.Browser
 Library    RPA.HTTP
@@ -8,15 +12,20 @@ Library    RPA.Tables
 Library    RPA.PDF
 Library    RPA.Archive
 Library    RPA.Dialogs
+Library    RPA.Robocorp.Vault
+
+Variables    variables.py
 
 Suite Teardown     Close All Browsers
 
 *** Variables ***
-${ORDERS_FILE_URL}            https://robotsparebinindustries.com/orders.csv
+#${ROBOT_ORDERS_WEB_URL}       https://robotsparebinindustries.com
+#${ORDERS_FILE_URL}            https://robotsparebinindustries.com/orders.csv
 ${ORDERS_FILE_LOCAL_PATH}     data_files/orders.csv
 
 ${SCREENSHOTS_PATH}           ${OUTPUT_DIR}${/}screenshots
 ${RECEIPTS_PATH}              ${OUTPUT_DIR}${/}receipts
+${RECEIPT_ZIP_FILE}           robot-receipt-PDFs.zip
 
 ${RETRY_TIMES_SERVE_ERROR}        5 times
 ${RETRY_INTERVAL_SERVE_ERROR}     1 s
@@ -27,9 +36,14 @@ ${ALLERT_OK_BTN}    //*[@type='button' and text()='OK']
 *** Tasks ***
 
 Order robots from RobotSpareBin Industries Inc
+    Initialize suite variables
+
+    # Testing secrets
+    Read data from vault using variable file
 
     Set Screenshot Directory    ${SCREENSHOTS_PATH}
-    Input orders csv url dialog
+    Input orders csv file name dialog
+    Log To Console    ordesr url ${ORDERS_FILE_URL}
     Open the robot order website
 
     ${orders_table}=    Get orders
@@ -48,23 +62,41 @@ Order robots from RobotSpareBin Industries Inc
     Create a ZIP file of the receipts
 
 *** Keywords ***
-Input orders csv url dialog
+Initialize suite variables
+    ${orders_url}=    Read data from vault using the Get Secret keyword
+    Set Suite Variable    ${ROBOT_ORDERS_WEB_URL}        ${orders_url}
 
-    Add heading       Input ordes file url
-    Add text input    orders_file_url
+Read data from vault using the Get Secret keyword
+    # Note! Reads secrets from vault.json
+    # With real RPA do not store secret data (vault.json)
+    # outside of the local directory like git repository
+
+    ${secret_url}=    Get Secret    url
+    ${robot_order_url}=    Set Variable     ${secret_url}[robot_order_web_site]
+    Log    Secret robot order url using the Get Secret keyword ${robot_order_url}
+
+    [Return]       ${robot_order_url}
+
+Read data from vault using variable file
+    # Reads secrets from variables.py
+    # With real RPA don't print out secret data
+    Log   Secret robot order url from variables.py file: ${SECRET_ROBOT_ORDERS_WEB_URL}
+
+Input orders csv file name dialog
+
+    Add heading       Input ordes file name
+    Add text input    orders_file_name
     ...                label=Orders file
-    ...                placeholder=Give orders csv file url here
-    ...                rows=5
+    ...                placeholder=Give orders csv file name here
+    ...                rows=1
 
-    ${result}=    Run dialog     title=Orders file    height=500    width=500
+    ${result}=    Run dialog     title=Orders file    height=400    width=500
 
-    ${ORDERS_FILE_URL}=    Set Variable   ${result.orders_file_url}
-    Set Suite Variable    ${ORDERS_FILE_URL}     ${result.orders_file_url}
-
+    Set Suite Variable    ${ORDERS_FILE_URL}     ${ROBOT_ORDERS_WEB_URL}/${result.orders_file_name}
     Log To Console    url to orders csv file: ${ORDERS_FILE_URL}
 
 Open the robot order website
-    Open Available Browser    https://robotsparebinindustries.com/
+    Open Available Browser    ${ROBOT_ORDERS_WEB_URL}
     Open order your robot tab
 
 Get orders
@@ -122,6 +154,7 @@ Store the receipt as a PDF file
     Html To Pdf    ${receipt_html}    ${robot_pdf_path}
 
     [Return]    ${robot_pdf_path}
+
 Take a screenshot of the robot
     [Arguments]        ${order_nbr}
 
@@ -142,7 +175,7 @@ Embed the robot screenshot to the receipt PDF file
 
 Create a ZIP file of the receipts
 
-    ${zip_file_name}=    Set Variable    ${OUTPUT_DIR}/robot-receipt-PDFs.zip
+    ${zip_file_name}=    Set Variable    ${OUTPUT_DIR}${/}${RECEIPT_ZIP_FILE}
     Archive Folder With Zip
     ...    ${RECEIPTS_PATH}
     ...    ${zip_file_name}
